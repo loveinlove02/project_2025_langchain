@@ -31,3 +31,4 @@ pip install pdfplumber
 pip install --upgrade langchain-teddynote
 
 pip install seaborn
+pip install graphviz IPython
