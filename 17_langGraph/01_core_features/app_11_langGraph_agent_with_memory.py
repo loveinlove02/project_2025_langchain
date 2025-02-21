@@ -130,4 +130,3 @@ for event in graph.stream({"messages": [("user", question)]}, config=config):
         print(f"\t\t[total_tokens]: {value['messages'][-1].usage_metadata['total_tokens']}")
         print(f"\t\t[input_token_details]: {value['messages'][-1].usage_metadata['input_token_details']}")
         print(f"\t\t[output_token_details]: {value['messages'][-1].usage_metadata['output_token_details']}")
-
