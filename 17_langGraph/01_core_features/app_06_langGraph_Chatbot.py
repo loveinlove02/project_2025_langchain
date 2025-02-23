@@ -1,7 +1,12 @@
 from typing import Annotated, TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
+
 from langchain_openai import ChatOpenAI
+
+from langchain.schema import HumanMessage, AIMessage
+from langchain_core.messages import ToolMessage
+
 from dotenv import load_dotenv
 import os
 
@@ -29,6 +34,7 @@ def chatbot(state: State):
     # print(f'[2] chatbot answer: \n', answer , "\n")
     print(f'[2] chatbot answer: \n', answer.content)
     print('==' * 50)
+    print()
 
     return {'messages': [answer]}
 
@@ -49,9 +55,29 @@ for event in graph.stream({'messages': [('user', question)]}):
     print('[event]')
 
     for k, value in event.items():
-        print(f'노드 이름: {k}')
-        print()
-        print(f"assistant 답변: ")
-        print(f"{value['messages'][-1].content}")
+        print(f'[노드 이름]: {k}')              # key는 해당 노도의 이름
+        # print(f'value: {value}')              # value에는 해당 노드의 값
+        
+        if isinstance(value['messages'][-1], HumanMessage):
+            print('==================== HumanMessage ========================')
+            print(f"[해당 노드 값] value : \n{value['messages'][-1]}")
+            print()
+            # print(f"[해당 노드 값] value[-1].content HumanMessage - 답변: ")
+            # print(f"{value['messages'][-1].content}")
+            print('==================== END HumanMessage ====================')
+            print() 
+        elif isinstance(value['messages'][-1], AIMessage):
+            print('==================== AIMessage ========================')
+            print(f"[해당 노드 값] value : \n{value['messages'][-1]}")
+            print()
+            # print(f"[해당 노드 값] value[-1].content - assistant 답변: ")
+            # print(f"{value['messages'][-1].content}")
+            print('==================== END AIMessage ====================')     
+            print()  
+        elif isinstance(value['messages'][-1], ToolMessage):
+            print('==================== ToolMessage ========================')
+
+            print('==================== END ToolMessage ====================')     
+            print()
 
     print('==' * 50)

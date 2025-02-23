@@ -20,6 +20,9 @@ from langchain_teddynote.graphs import visualize_graph
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.runnables import RunnableConfig
 
+from langchain.schema import HumanMessage, AIMessage
+from langchain_core.messages import ToolMessage
+
 memory = MemorySaver()
 
 ######### 1. 상태 정의 #########
@@ -93,6 +96,40 @@ config = RunnableConfig(
 )
 
 
+question = ('대한민국 대구 동성로의 중앙떡볶이에 대해서 웹 검색을 해주세요.')
+
+i = 1
+
+for event in graph.stream({"messages": [("user", question)]}, config=config):
+    print('==' * 50)
+    print('[event]')
+    # print(event)
+
+    for key, value in event.items():
+        print(f'노드 이름 key: {key}')
+
+        if isinstance(value['messages'][-1], HumanMessage):
+            print('==================== HumanMessage ========================')
+            print(f"노드 값 value: \n{value['messages'][-1]}")
+            print('==================== END HumanMessage ====================')
+            print() 
+        elif isinstance(value['messages'][-1], AIMessage):
+            print('==================== AIMessage ========================')
+            print(f"노드 값 value: \n{value['messages'][-1]}")
+            print('==================== END AIMessage ====================')     
+            print() 
+        elif isinstance(value['messages'][-1], ToolMessage):
+            print('==================== ToolMessage ========================')
+            print(f"노드 값 value: \n{value['messages'][-1]}")
+            print('==================== END ToolMessage ====================')     
+            print()
+
+    i=i+1
+    
+    print('==' * 50)
+
+
+"""
 question = ('`소프트웨어놀이터`에서 코딩강의를 하고 있는 이인환입니다.')
 
 for event in graph.stream({"messages": [("user", question)]}, config=config):
@@ -130,3 +167,4 @@ for event in graph.stream({"messages": [("user", question)]}, config=config):
         print(f"\t\t[total_tokens]: {value['messages'][-1].usage_metadata['total_tokens']}")
         print(f"\t\t[input_token_details]: {value['messages'][-1].usage_metadata['input_token_details']}")
         print(f"\t\t[output_token_details]: {value['messages'][-1].usage_metadata['output_token_details']}")
+"""
