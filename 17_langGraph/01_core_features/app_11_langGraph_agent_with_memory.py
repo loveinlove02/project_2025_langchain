@@ -23,6 +23,8 @@ from langchain_core.runnables import RunnableConfig
 from langchain.schema import HumanMessage, AIMessage
 from langchain_core.messages import ToolMessage
 
+import json
+
 memory = MemorySaver()
 
 ######### 1. 상태 정의 #########
@@ -48,17 +50,33 @@ llm_with_tools = llm.bind_tools(tools)
 
 
 def chatbot(state: State):
+    print(f'=='*50)
+    print('===== chatbot() 함수 시작 =====')
+    print(f"chatbot() 으로 넘어온 메시지 :")
+    print(state['messages'])
+    print(f"메시지 개수 : {len(state['messages'])}")
+    print()
+
     answer = llm_with_tools.invoke(state['messages'])
 
-    print('=================================================================================')
-    print(f'chatbot() 실행\n')
-    print(f"[1] state[messages]: \n{state['messages']}\n")
-    # print(f'[2] chatbot answer: \n', answer , "\n")
-    print(f'[2] chatbot answer: \n', answer.content)
-    print(f'[3] answer.additional_kwargs: \n', answer.additional_kwargs)
-    print('=================================================================================')
+    print(f'[도구 사용 LLM 실행 결과 content]: {answer.content}')
+    print(f'[도구 사용 LLM 실행 결과 answer]: {answer}')
+    print(f'[도구 사용 LLM 실행 결과 additional_kwargs]: {answer.additional_kwargs}')
+
+    print('===== chatbot() 함수  끝 =====')
+    print(f'=='*50)
+    print()
 
     return {'messages': [answer]}
+
+
+
+
+
+
+
+
+
 
 
 
@@ -101,70 +119,62 @@ question = ('대한민국 대구 동성로의 중앙떡볶이에 대해서 웹 �
 i = 1
 
 for event in graph.stream({"messages": [("user", question)]}, config=config):
-    print('==' * 50)
-    print('[event]')
-    # print(event)
+    print()
+    print('===== 여기서 시작 =====')
+    print(f'[event] 바깥 for 시작 {i}')
+    print()
 
-    for key, value in event.items():
-        print(f'노드 이름 key: {key}')
+    for k, value in event.items():
+        print(f'실행한 노드 이름: {k}')
+        print()
 
         if isinstance(value['messages'][-1], HumanMessage):
             print('==================== HumanMessage ========================')
-            print(f"노드 값 value: \n{value['messages'][-1]}")
+            print(f"[해당 노드 값] value : \n{value['messages'][-1]}")
+            # print(f"[해당 노드 값] content: {value['messages'][-1].content}")
+            # print(f"additional_kwargs: {value['messages'][-1].additional_kwargs}")
             print('==================== END HumanMessage ====================')
-            print() 
+            print()
         elif isinstance(value['messages'][-1], AIMessage):
             print('==================== AIMessage ========================')
-            print(f"노드 값 value: \n{value['messages'][-1]}")
-            print('==================== END AIMessage ====================')     
-            print() 
+            # print(f"[해당 노드 값] value : \n{value['messages'][-1]}")
+            print(f"[해당 노드 값] value content: {value['messages'][-1].content}")
+            # print(f"addtional_kwargs: {value['messages'][-1].additional_kwargs}")
+
+            if 'tool_calls' in value['messages'][-1].additional_kwargs:
+                # print(f"additional_kwargs tool_calls: {value['messages'][-1].additional_kwargs['tool_calls']}")
+                tool_calls = value['messages'][-1].additional_kwargs['tool_calls']
+
+                for call in tool_calls:
+                    if 'function' in call:
+                        arguments = json.loads(call['function']['arguments'])
+                        name = call['function']['name']
+
+                        print(f"도구 이름 : {name}")
+                        print(f"Arguments: {arguments}")
+            else:
+                print("additional_kwargs tool_calls: None")
+            print('==================== END AIMessage ====================')    
+
         elif isinstance(value['messages'][-1], ToolMessage):
             print('==================== ToolMessage ========================')
-            print(f"노드 값 value: \n{value['messages'][-1]}")
-            print('==================== END ToolMessage ====================')     
-            print()
+            # print(f"[해당 노드 값] value : \n{value['messages'][-1]}")
+            content = json.loads(value['messages'][-1].content)
 
+            if content and isinstance(content, list) and len(content) > 0:
+                print(f"[해당 노드 값] 제목: {content[0].get('title', 'No title')}")
+                print(f"[해당 노드 값] URL: {content[0].get('url', 'No URL')}")
+                print(f"[해당 노드 값] 내용: {content[0].get('content', 'No URL')}")
+            else:
+                print("No content or invalid content format in ToolMessage")
+
+            print('==================== END ToolMessage ====================')   
+
+        print()
+        
+    print('바깥 for 끝')
     i=i+1
     
-    print('==' * 50)
-
-
-"""
-question = ('`소프트웨어놀이터`에서 코딩강의를 하고 있는 이인환입니다.')
-
-for event in graph.stream({"messages": [("user", question)]}, config=config):
-    
-    print('[event] 실행 결과')
-
-    for value in event.values():
-        print('[value]: ')
-        print(value['messages'][-1])
-        
-        print(f"\t[content]: {value['messages'][-1].content}")
-
-        print(f"\t[additional_kwargs]: ")
-        print(f"\t\t{value['messages'][-1].additional_kwargs}")
-
-        print('\t\t[token_usage]: ')
-        # print(f"\t\t\t {value['messages'][-1].response_metadata['token_usage']}")
-        print(f"\t\t\t[completion_tokens]: {value['messages'][-1].response_metadata['token_usage']['completion_tokens']}")
-        print(f"\t\t\t[prompt_tokens]: {value['messages'][-1].response_metadata['token_usage']['prompt_tokens']}")
-        print(f"\t\t\t[total_tokens]: {value['messages'][-1].response_metadata['token_usage']['total_tokens']}")
-        print(f"\t\t\t[completion_tokens_details]: {value['messages'][-1].response_metadata['token_usage']['completion_tokens_details']}")
-        print(f"\t\t\t[prompt_tokens_details]: {value['messages'][-1].response_metadata['token_usage']['prompt_tokens_details']}")
-
-        print(f"\t\t[model_name]: {value['messages'][-1].response_metadata['model_name']}")
-        print(f"\t\t[system_fingerprint]: {value['messages'][-1].response_metadata['system_fingerprint']}")
-        print(f"\t\t[finish_reason]: {value['messages'][-1].response_metadata['finish_reason']}")        
-        
-        print('\t[id]: ')
-        print(f"\t\t {value['messages'][-1].id}")
-
-        
-        print('\t[usage_metadata]: ')
-        print(f"\t\t[input_tokens]: {value['messages'][-1].usage_metadata['input_tokens']}")
-        print(f"\t\t[output_tokens]: {value['messages'][-1].usage_metadata['output_tokens']}")
-        print(f"\t\t[total_tokens]: {value['messages'][-1].usage_metadata['total_tokens']}")
-        print(f"\t\t[input_token_details]: {value['messages'][-1].usage_metadata['input_token_details']}")
-        print(f"\t\t[output_token_details]: {value['messages'][-1].usage_metadata['output_token_details']}")
-"""
+    print('===== 여기서 끝 =====') 
+    print()
+print(f'전체 반복문 {i}번 실행')    
