@@ -50,34 +50,54 @@ llm_with_tools = llm.bind_tools(tools)
 
 
 def chatbot(state: State):
-    print(f'=='*50)
     print('===== chatbot() 함수 시작 =====')
-    print(f"chatbot() 으로 넘어온 메시지 :")
-    print(state['messages'])
-    print(f"메시지 개수 : {len(state['messages'])}")
-    print()
+    
+    print("[1] chatbot() 으로 넘어온 메시지: ")
+
+    message_type1 = ''
+
+    for msg in state['messages']:
+        if isinstance(msg, HumanMessage):
+            message_type1 = message_type1 + '[HumanMessage]'
+        elif isinstance(msg, AIMessage):
+            message_type1 = message_type1 + '[AIMessage]'
+        elif isinstance(msg, ToolMessage):
+            message_type1 = message_type1 + '[ToolMessage]'
+        
+        print(f'메시지 타입: {message_type1}')
+        print(msg)
+        print()
+
+    print(f"\n[2] 메시지 개수 : {len(state['messages'])}\n")
 
     answer = llm_with_tools.invoke(state['messages'])
 
-    print(f'[도구 사용 LLM 실행 결과 content]: {answer.content}')
-    print(f'[도구 사용 LLM 실행 결과 answer]: {answer}')
-    print(f'[도구 사용 LLM 실행 결과 additional_kwargs]: {answer.additional_kwargs}')
+    # print(f'[도구 사용 LLM 실행 결과 content]: {answer.content}')
+    
+    print('[3] chatbot()에서 실행:')
+    print('메시지 타입: ', end='')
 
-    print('===== chatbot() 함수  끝 =====')
-    print(f'=='*50)
+    message_type2 = ''
+    if isinstance(answer, AIMessage):
+        message_type2 = message_type2 + '[AIMessage]'
+    elif isinstance(answer, HumanMessage):
+        message_type2 = message_type2 + '[HumanMessage]'
+    elif isinstance(answer, ToolMessage):
+        message_type2 = message_type2 + '[ToolMessage]'
+    else:
+        message_type2 = type(answer)
+
+    print(message_type2)
+    print(answer)
     print()
 
-    return {'messages': [answer]}
+    answer_value = {'messages': [answer]}
 
+    print(f"[4] chatbot()에서 실행 후 메시지 개수: {message_type1} {message_type2} {len(state['messages']) + len(answer_value)}") 
+    print('===== chatbot() 함수  끝 =====')
+    print()
 
-
-
-
-
-
-
-
-
+    return answer_value
 
 
 graph_builder = StateGraph(State)
@@ -114,14 +134,16 @@ config = RunnableConfig(
 )
 
 
-question = ('대한민국 대구 동성로의 중앙떡볶이에 대해서 웹 검색을 해주세요.')
+question = '대구 맛집을 알려줘?'
 
-i = 1
+state = State(messages=[('user', question)])
+
+
 
 for event in graph.stream({"messages": [("user", question)]}, config=config):
     print()
-    print('===== 여기서 시작 =====')
-    print(f'[event] 바깥 for 시작 {i}')
+    print('========================= 여기서 시작 ====================')
+    print(f'[event] 바깥 for 시작')
     print()
 
     for k, value in event.items():
@@ -130,51 +152,46 @@ for event in graph.stream({"messages": [("user", question)]}, config=config):
 
         if isinstance(value['messages'][-1], HumanMessage):
             print('==================== HumanMessage ========================')
-            print(f"[해당 노드 값] value : \n{value['messages'][-1]}")
-            # print(f"[해당 노드 값] content: {value['messages'][-1].content}")
-            # print(f"additional_kwargs: {value['messages'][-1].additional_kwargs}")
+            # print(f"[해당 노드 값] value : \n{value['messages'][-1]}")
+            print(f"[해당 노드 값] content: {value['messages'][-1].content}")
             print('==================== END HumanMessage ====================')
             print()
         elif isinstance(value['messages'][-1], AIMessage):
             print('==================== AIMessage ========================')
             # print(f"[해당 노드 값] value : \n{value['messages'][-1]}")
-            print(f"[해당 노드 값] value content: {value['messages'][-1].content}")
-            # print(f"addtional_kwargs: {value['messages'][-1].additional_kwargs}")
+            print(f"[해당 노드 값] content: {value['messages'][-1].content}")
 
-            if 'tool_calls' in value['messages'][-1].additional_kwargs:
-                # print(f"additional_kwargs tool_calls: {value['messages'][-1].additional_kwargs['tool_calls']}")
-                tool_calls = value['messages'][-1].additional_kwargs['tool_calls']
+            if hasattr(value['messages'][-1], 'tool_calls') and len(value['messages'][-1].tool_calls) > 0:
+                print('tool call 있음')
 
-                for call in tool_calls:
-                    if 'function' in call:
-                        arguments = json.loads(call['function']['arguments'])
-                        name = call['function']['name']
+                tool_result = value['messages'][-1].tool_calls
 
-                        print(f"도구 이름 : {name}")
-                        print(f"Arguments: {arguments}")
+                print(f"도구 이름 : {tool_result[0]['name']}")
+                print(f"도구 인자: {tool_result[0]['args']}")            
             else:
-                print("additional_kwargs tool_calls: None")
+                print('tool call 없음')                
             print('==================== END AIMessage ====================')    
 
         elif isinstance(value['messages'][-1], ToolMessage):
             print('==================== ToolMessage ========================')
             # print(f"[해당 노드 값] value : \n{value['messages'][-1]}")
+            # print(f"[해당 노드 값] content : \n{value['messages'][-1].content}")
+            # print(f"[해당 노드 값] 도구 name : {value['messages'][-1].name}")
+            print(f"[해당 노드 값] 도구 도구 이름 : {value['messages'][-1].name}")
+
             content = json.loads(value['messages'][-1].content)
 
-            if content and isinstance(content, list) and len(content) > 0:
+            if content and isinstance(content, list) and len(content) > 0:                
                 print(f"[해당 노드 값] 제목: {content[0].get('title', 'No title')}")
                 print(f"[해당 노드 값] URL: {content[0].get('url', 'No URL')}")
-                print(f"[해당 노드 값] 내용: {content[0].get('content', 'No URL')}")
+                print(f"[해당 노드 값] 내용: {content[0].get('content', 'No URL')}")                
             else:
                 print("No content or invalid content format in ToolMessage")
 
             print('==================== END ToolMessage ====================')   
 
         print()
-        
+
     print('바깥 for 끝')
-    i=i+1
-    
-    print('===== 여기서 끝 =====') 
+    print('========================= 여기서 끝 =========================') 
     print()
-print(f'전체 반복문 {i}번 실행')    
