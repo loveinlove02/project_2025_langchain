@@ -1,0 +1,9 @@
+1. 서론
+2. Transformer의 기본 구조
+3. Self-Attention 메커니즘
+4. Positional Encoding
+5. Multi-Head Attention
+6. Feed-Forward Neural Networks
+7. Residual Connections과 Layer Normalization
+8. Transformer의 장점과 한계
+9. 결론
